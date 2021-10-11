@@ -42,7 +42,7 @@ if [ -z ${CHECK_DIALOG} ]; then
   exit
 fi
 
-CHECK_DOCKER=$(docker --version | tac | tail -n 1 | cut -d " " -f 3 | cut -c 1-5)
+CHECK_DOCKER=$(docker --version | tail -r | tail -n 1 | cut -d " " -f 3 | cut -c 1-5)
 
 vercomp () {
     if [[ $1 == $2 ]]
