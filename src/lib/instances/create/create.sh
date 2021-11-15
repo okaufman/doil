@@ -281,7 +281,7 @@ doil_send_okay
 doil_send_status "Setting folder rights"
 if [[ -z ${GLOBAL} ]]
 then
-  chown -R ${USER}:${USER} ${FOLDERPATH}
+  chown -R ${USER}:doil ${FOLDERPATH}
 else
   chown -R ${USER}:doil ${FOLDERPATH}
   chmod g+w ${FOLDERPATH}
