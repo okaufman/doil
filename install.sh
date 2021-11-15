@@ -94,12 +94,6 @@ NC='\033[0m'
 NOW=$(date +'%d.%m.%Y %I:%M:%S')
 echo "[${NOW}] Started installing doil"
 
-# create doil group
-echo -n "Adding group doil ..."
-
-groupadd doil
-
-printf " ${GREEN}ok${NC}\n"
 
 # create the log file
 echo -n "Creating log file in /var/log/doil.log ..."
@@ -125,7 +119,6 @@ chmod -R g+s /etc/doil
 
 mkdir /usr/local/share/doil
 mkdir /usr/local/share/doil/templates
-mkdir /usr/local/share/doil/stack
 mkdir /usr/local/share/doil/instances
 mkdir /usr/local/share/doil/repositories
 chown -R root:doil /usr/local/share/doil
@@ -157,8 +150,7 @@ chmod -R g+s /usr/local/lib/doil/server/proxy/conf/sites
 cp -r src/templates/* /usr/local/share/doil/templates
 chown root:doil /usr/local/share/doil/templates
 
-cp -r src/stack/* /usr/local/share/doil/stack
-chown -R root:doil /usr/local/share/doil/stack
+
 
 printf " ${GREEN}ok${NC}\n"
 
@@ -181,6 +173,7 @@ printf " ${GREEN}ok${NC}\n"
 echo -n "Setting up local configuration ..."
 
 HOME=$(eval echo "~${SUDO_USER}")
+mkdir ${HOME}/.doil/stack
 mkdir ${HOME}/.doil
 mkdir ${HOME}/.doil/config/
 touch ${HOME}/.doil/config/repositories.conf
@@ -189,6 +182,9 @@ mkdir ${HOME}/.doil/instances
 chown -R ${SUDO_USER}:${SODU_USER} "${HOME}/.doil"
 usermod -a -G doil ${SUDO_USER}
 echo "${SUDO_USER}">>"/etc/doil/user.conf"
+
+cp -r src/stack/* ${HOME}/.doil/stack
+chown -R root:doil ${HOME}/.doil/stack
 
 printf " ${GREEN}ok${NC}\n"
 

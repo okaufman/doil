@@ -295,8 +295,8 @@ doil_send_status "Copying necessary files"
 cp "/usr/local/share/doil/templates/minion/run-supervisor.sh" "${FOLDERPATH}/conf/run-supervisor.sh"
 cp "/usr/local/share/doil/templates/minion/Dockerfile" "${FOLDERPATH}/Dockerfile"
 cp "/usr/local/share/doil/templates/minion/salt-minion.conf" "${FOLDERPATH}/conf/salt-minion.conf"
-cp "/usr/local/share/doil/templates/minion/docker-compose.yml" "${FOLDERPATH}/docker-compose.yml"
-cp "/usr/local/share/doil/stack/config/minion.cnf" "${FOLDERPATH}/conf/minion.cnf"
+cp "/usr/local/share/doil/templates/minion/docker-compose-mac.yml" "${FOLDERPATH}/docker-compose.yml"
+cp "${HOME}/.doil/stack/config/minion.cnf" "${FOLDERPATH}/conf/minion.cnf"
 doil_send_okay
 
 # setting up config file
@@ -388,11 +388,12 @@ doil_send_okay
 ############
 # set grains
 doil_send_status "Setting up instance configuration"
-GRAIN_MYSQL_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13 ; echo '')
-GRAIN_CRON_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13 ; echo '')
-docker exec -ti saltmain bash -c "salt '${NAME}.${SUFFIX}' grains.set 'mysql_password' ${GRAIN_MYSQL_PASSWORD} --out=quiet"
-docker exec -ti saltmain bash -c "salt '${NAME}.${SUFFIX}' grains.set 'doil_domain' http://${DOIL_HOST}/${NAME} --out=quiet"
-docker exec -ti saltmain bash -c "salt '${NAME}.${SUFFIX}' grains.set 'doil_project_name' ${NAME} --out=quiet"
+GRAIN_MYSQL_PASSWORD=$(cat /dev/urandom | env LC_CTYPE=C tr -dc a-zA-Z0-9 | head -c 13; echo)
+GRAIN_CRON_PASSWORD=$(cat /dev/urandom | env LC_CTYPE=C tr -dc a-zA-Z0-9 | head -c 13; echo)
+docker exec -ti saltmain bash -c "salt-key -a '${NAME}.${SUFFIX}'"
+docker exec -ti saltmain bash -c "salt '${NAME}_${SUFFIX}' grains.set 'mysql_password' ${GRAIN_MYSQL_PASSWORD} "
+docker exec -ti saltmain bash -c "salt '${NAME}_${SUFFIX}' grains.set 'doil_domain' http://${DOIL_HOST}/${NAME} "
+docker exec -ti saltmain bash -c "salt '${NAME}_${SUFFIX}' grains.set 'doil_project_name' ${NAME} "
 sleep 5
 doil_send_okay
 

@@ -128,5 +128,5 @@ if [[ ${COMMAND} == "states" ]]
 then
   echo "Currently available states to apply:"
 
-  ls -1 /usr/local/share/doil/stack/states
+  ls -1 ${HOME}/.doil/stack/states
 fi

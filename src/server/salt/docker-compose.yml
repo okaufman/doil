@@ -9,8 +9,8 @@ services:
     hostname: saltmain
     domainname: local
     volumes:
-      - /usr/local/share/doil/stack/states:/srv/salt/states
-      - /usr/local/share/doil/stack/config/master.cnf:/etc/salt/master
+      - ${HOME}/.doil/stack/states:/srv/salt/states
+      - ${HOME}/.doil/stack/config/master.cnf:/etc/salt/master
     networks:
       saltnet:
         ipv4_address: 172.20.0.254

@@ -16,24 +16,24 @@ php7.4:
       - php7.4-bcmath
       - php7.4-imap
 
-/root/cleanup.sh:
+/root/cleanup.sh_74:
   file.managed:
     - source: salt://php/cleanup.sh
     - user: root
     - group: root
     - mode: 740
 
-cleanup:
+cleanup_74:
   cmd.run:
     - cwd: /root/
     - name: ./cleanup.sh
 
-a2_disable_php73:
+a2_disable_php73_74:
   module.run:
     - name: apache.a2dismod
     - mod: php7.3
 
-a2_enable_php:
+a2_enable_php7.4:
   module.run:
     - name: apache.a2enmod
     - mod: php7.4

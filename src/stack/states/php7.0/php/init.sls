@@ -1,13 +1,13 @@
-apt_https:
+apt_https_7:
   pkg.installed:
     - name: software-properties-common
 
-php_repo_list:
+php_repo_list_7:
   cmd.run:
     - name: echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list
     - unless: test -f /etc/apt/sources.list.d/php.list
 
-php_repo_key:
+php_repo_key_7:
   cmd.run:
     - name: wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
     - unless: test -f /etc/apt/trusted.gpg.d/php.gpg
@@ -31,29 +31,29 @@ php7.0:
       - php7.0-bcmath
       - php7.0-imap
 
-/root/cleanup.sh:
+/root/cleanup.sh_7:
   file.managed:
     - source: salt://php/cleanup.sh
     - user: root
     - group: root
     - mode: 740
 
-cleanup:
+cleanup_7:
   cmd.run:
     - cwd: /root/
     - name: ./cleanup.sh
 
-a2_disable_php73:
+a2_disable_php73_7:
   module.run:
     - name: apache.a2dismod
     - mod: php7.3
 
-a2_disable_php74:
+a2_disable_php74_70:
   module.run:
     - name: apache.a2dismod
     - mod: php7.4
 
-a2_enable_php:
+a2_enable_php7:
   module.run:
     - name: apache.a2enmod
     - mod: php7.0
