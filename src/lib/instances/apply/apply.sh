@@ -90,7 +90,7 @@ if [[ -z "${STATE}" ]]
 then
   read -p "Name the state you want to apply: " STATE
 fi
-STATEPATH="${HOME}/.doil/stack/states/${STATE}"
+STATEPATH="/usr/local/share/doil/stack/states/${STATE}"
 if [[ -z "${STATE}" ]]
 then
   echo -e "\033[1mERROR:\033[0m"

@@ -296,7 +296,7 @@ cp "/usr/local/share/doil/templates/minion/run-supervisor.sh" "${FOLDERPATH}/con
 cp "/usr/local/share/doil/templates/minion/Dockerfile" "${FOLDERPATH}/Dockerfile"
 cp "/usr/local/share/doil/templates/minion/salt-minion.conf" "${FOLDERPATH}/conf/salt-minion.conf"
 cp "/usr/local/share/doil/templates/minion/docker-compose-mac.yml" "${FOLDERPATH}/docker-compose.yml"
-cp "${HOME}/.doil/stack/config/minion.cnf" "${FOLDERPATH}/conf/minion.cnf"
+cp "/usr/local/share/doil/stack/config/minion.cnf" "${FOLDERPATH}/conf/minion.cnf"
 doil_send_okay
 
 # setting up config file
