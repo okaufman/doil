@@ -173,7 +173,7 @@ printf " ${GREEN}ok${NC}\n"
 echo -n "Setting up local configuration ..."
 
 HOME=$(eval echo "~${SUDO_USER}")
-mkdir ${HOME}/.doil/stack
+mkdir /usr/local/share/doil/stack
 mkdir ${HOME}/.doil
 mkdir ${HOME}/.doil/config/
 touch ${HOME}/.doil/config/repositories.conf
@@ -183,8 +183,8 @@ chown -R ${SUDO_USER}:${SODU_USER} "${HOME}/.doil"
 usermod -a -G doil ${SUDO_USER}
 echo "${SUDO_USER}">>"/etc/doil/user.conf"
 
-cp -r src/stack/* ${HOME}/.doil/stack
-chown -R root:doil ${HOME}/.doil/stack
+cp -r src/stack/* /usr/local/share/doil/stack
+chown -R root:doil /usr/local/share/doil/stack
 
 printf " ${GREEN}ok${NC}\n"
 
