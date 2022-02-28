@@ -1,32 +1,38 @@
 {% set cpu = salt['grains.get']('num_cpus', '4') %}
 {% set ram = salt['grains.get']('mem_total', '4096') %}
 {% set mysql_password = salt['grains.get']('mysql_password', 'ilias') %}
-
-mysql_packages:
-  pkg.installed:
-    - pkgs:
-      - mariadb-server
-      - supervisor
-      - python3-mysqldb
+{% set doil_host_system = salt['grains.get']('doil_host_system', 'linux') %}
 
 /etc/mysql/mariadb.conf.d/50-server.cnf:
   file:
     - managed
     - source: salt://mysql/my.cnf
-    - user: root
-    - group: root
-    - mode: 644
     - template: jinja
     - context:
-        cpu: {{ cpu }}
-        ram: {{ ram }}
+      cpu: {{ cpu }}
+      ram: {{ ram }}
 
 /etc/supervisor/conf.d/mysql.conf:
   file.managed:
     - source: salt://mysql/mysql.conf
-    - user: root
-    - group: root
-    - mode: 644
+
+{% if salt['grains.get']('doil_host_system', 'linux') == 'linux' %}
+  /etc/mysql/:
+    file.directory:
+      - user: root
+      - group: root
+      - recurse:
+        - user
+        - group
+
+  /var/lib/mysql/:
+    file.directory:
+      - user: mysql
+      - group: mysql
+      - recurse:
+        - user
+        - group
+{% endif %}
 
 mysql_supervisor_signal:
   supervisord.running:

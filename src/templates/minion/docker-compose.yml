@@ -9,6 +9,7 @@ services:
     hostname: %TPL_PROJECT_NAME%
     domainname: %TPL_PROJECT_DOMAINNAME%
     volumes:
+<<<<<<< HEAD
       - ./volumes/etc/apache2:/etc/apache2
       - ./volumes/etc/php:/etc/php
       - ./volumes/etc/mysql:/etc/mysql
@@ -23,6 +24,56 @@ services:
       - ./conf:/root/conf
       - ~/.ssh/:/root/.ssh/
       - ~/.gitconfig:/root/.gitconfig
+=======
+      - type: bind
+        source: ./volumes/mysql
+        target: /var/lib/mysql
+      - type: bind
+        source: ./volumes/etc/mysql
+        target: /etc/mysql
+      - type: bind
+        source: ./volumes/etc/apache2
+        target: /etc/apache2
+      - type: bind
+        source: ./volumes/etc/php
+        target: /etc/php
+      - type: bind
+        source: ./volumes/ilias
+        target: /var/www/html
+      - type: bind
+        source: ./volumes/data
+        target: /var/ilias/data
+      - type: bind
+        source: ./volumes/index
+        target: /var/ilias/index
+      - type: bind
+        source: ./volumes/logs
+        target: /var/ilias/logs
+      - type: bind
+        source: ./volumes/logs/error/
+        target: /var/ilias/logs/error
+      - type: bind
+        source: ./volumes/logs/apache2
+        target: /var/log/apache2
+      - type: bind
+        source: ./conf/minion.cnf
+        target: /etc/salt/minion
+      - type: bind
+        source: ./conf
+        target: /root/conf
+      - type: bind
+        source: ~/.ssh/
+        target: /root/.ssh
+      - type: bind
+        source: ~/.bashrc
+        target: /root/.bashrc
+      - type: bind
+        source: ~/.vimrc
+        target: /root/.vimrc
+      - type: bind
+        source: ~/.gitconfig
+        target: /root/.gitconfig
+>>>>>>> master
       - type: bind
         source: ./conf/salt-minion.conf
         target: /etc/supervisor/conf.d/salt-minion.conf
@@ -39,5 +90,3 @@ networks:
     external: true
   salt_saltnet:
     external: true
-volumes:
-    persistent:

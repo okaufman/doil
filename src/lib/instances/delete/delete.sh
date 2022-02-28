@@ -17,9 +17,6 @@
 source /usr/local/lib/doil/lib/include/env.sh
 source /usr/local/lib/doil/lib/include/helper.sh
 
-# we can move the pointer one position
-shift
-
 # check if command is just plain help
 # if we don't have any command we load the help
 while [[ $# -gt 0 ]]
@@ -33,6 +30,10 @@ while [[ $# -gt 0 ]]
       ;;
     -q|--quiet)
       QUIET=TRUE
+      shift
+      ;;
+    -y|--yes)
+      CONFIRM="y"
       shift
       ;;
     -g|--global)
@@ -56,7 +57,11 @@ fi
 if [ -h "${LINKNAME}" ]
 then
 
-  read -p "Please confirm that you want to delete ${INSTANCE} [yN]: " CONFIRM
+  if [[ -z ${CONFIRM} ]]
+  then
+    read -p "Please confirm that you want to delete ${INSTANCE} [yN]: " CONFIRM
+  fi
+
   if [[ ${CONFIRM} == "y" ]]
   then
 
@@ -83,12 +88,20 @@ then
     # check proxy server
     doil system:proxy start --quiet
 
+    # start machine for some adjustments
+    doil up ${INSTANCE} --quiet ${FLAG}
+    THE_USER=$(id -u ${USER})
+    THE_GROUP=$(id -g ${USER})
+    docker exec -i ${INSTANCE}_${SUFFIX} bash -c "chown -R ${THE_USER}:${THE_GROUP} /var/lib/mysql"
+    docker exec -i ${INSTANCE}_${SUFFIX} bash -c "chown -R ${THE_USER}:${THE_GROUP} /etc/mysql"
+    docker exec -i ${INSTANCE}_${SUFFIX} bash -c "chown -R ${THE_USER}:${THE_GROUP} /etc/php"
+
     # set machine inactive
     doil down ${INSTANCE} --quiet ${FLAG}
 
     # remove directory
     the_path=$(readlink ${LINKNAME})
-    sudo rm -rf $the_path
+    rm -rf $the_path
 
     # remove link
     if [[ ${GLOBAL} == TRUE ]]
@@ -99,7 +112,7 @@ then
     fi
 
     # remove key
-    docker exec -ti saltmain bash -c "echo 'y' | salt-key -d ${INSTANCE}.${SUFFIX}"
+    docker exec -i saltmain bash -c "echo 'y' | salt-key -d ${INSTANCE}.${SUFFIX}"
 
     # remove proxy
     if [ -f "/usr/local/lib/doil/server/proxy/conf/sites/${INSTANCE}_${SUFFIX}.conf" ]
@@ -109,7 +122,7 @@ then
     doil system:proxy reload --quiet
 
     # remove docker image
-    docker volume rm ${INSTANCE}_${SUFFIX}_persistent
+    docker volume rm ${INSTANCE}_persistent
     docker rmi $(docker images "doil/${INSTANCE}_${SUFFIX}" -a -q)
 
     doil_send_log "Instance deleted"

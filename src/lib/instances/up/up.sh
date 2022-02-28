@@ -17,9 +17,6 @@
 source /usr/local/lib/doil/lib/include/env.sh
 source /usr/local/lib/doil/lib/include/helper.sh
 
-# we can move the pointer one position
-shift
-
 # check if command is just plain help
 # if we don't have any command we load the help
 while [[ $# -gt 0 ]]
@@ -97,13 +94,12 @@ then
   # Start the container
   docker-compose up -d
 
-  # renew key
-  docker exec -ti ${INSTANCE}_${SUFFIX} bash -c "rm /var/lib/salt/pki/minion/minion_master.pub"
-  docker exec -ti ${INSTANCE}_${SUFFIX} bash -c "service salt-minion stop"
-  docker exec -ti ${INSTANCE}_${SUFFIX} bash -c "salt-minion -d"
-
+  # start cron service
+  docker exec -i ${INSTANCE}_${SUFFIX} bash -c "service cron status" 2>&1 > /dev/null
+  docker exec -i ${INSTANCE}_${SUFFIX} bash -c "service cron start" 2>&1 > /dev/null
+  
   # remove the current ip from the host file and add the new one
-  DCHASH=$(doil_get_hash $INSTANCE_$SUFFIX)
+  DCHASH=$(doil_get_hash ${INSTANCE}_${SUFFIX})
   DCIP=$(doil_get_data $DCHASH "ip")
 
   if [ -f "/usr/local/lib/doil/server/proxy/conf/sites/${INSTANCE}_${SUFFIX}.conf" ]

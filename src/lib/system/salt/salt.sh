@@ -17,9 +17,6 @@
 source /usr/local/lib/doil/lib/include/env.sh
 source /usr/local/lib/doil/lib/include/helper.sh
 
-# we can move the pointer one position
-shift
-
 # check if command is just plain help
 # if we don't have any command we load the help
 while [[ $# -gt 0 ]]
@@ -79,7 +76,7 @@ then
 
   doil system:salt start --quiet
 
-  docker exec -ti saltmain bash -c 'echo "y" | salt-key -D'
+  docker exec -i saltmain bash -c 'echo "y" | salt-key -D'
   
   doil_send_log "Finished pruning main salt server"
 fi

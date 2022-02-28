@@ -17,9 +17,6 @@
 source /usr/local/lib/doil/lib/include/env.sh
 source /usr/local/lib/doil/lib/include/helper.sh
 
-# we can move the pointer one position
-shift
-
 # check if command is just plain help
 # if we don't have any command we load the help
 while [[ $# -gt 0 ]]
@@ -127,7 +124,7 @@ then
   doil_send_log "Reloading proxy server"
 
   doil system:proxy start --quiet
-  docker exec -ti doil_proxy bash -c "/etc/init.d/nginx reload"
+  docker exec -i doil_proxy bash -c "/etc/init.d/nginx reload"
 
   doil_send_log "proxy server reloaded"
 fi

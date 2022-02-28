@@ -20,16 +20,13 @@ source /usr/local/lib/doil/lib/include/helper.sh
 # set current ad
 CWD=$(pwd)
 
-# we can move the pointer one position
-shift
-
 # check if command is just plain help
 # if we don't have any command we load the help
 while [[ $# -gt 0 ]]
-	do
-	key="$1"
+  do
+  key="$1"
 
-	case $key in
+  case $key in
     -n|--name)
       NAME="${2}"
       shift # past argument
@@ -84,7 +81,7 @@ while [[ $# -gt 0 ]]
       echo -e "\tUse \033[1mdoil instances:create --help\033[0m for more information"
       exit 255
       ;;
-	esac
+  esac
 done
 
 # Pipe output to null if needed
@@ -245,8 +242,6 @@ FOLDERPATH="${TARGET}/${NAME}"
 # config
 DOIL_HOST=$(doil_get_conf host)
 
-doil_send_log "Start creating project ${NAME}"
-
 # update debian
 doil_send_status "Updating debian image"
 docker pull debian:stable --quiet > /dev/null
@@ -262,11 +257,15 @@ doil_send_okay
 doil_send_status "Create basic folders"
 
 mkdir -p "${FOLDERPATH}/conf"
+mkdir -p "${FOLDERPATH}/conf/salt"
 mkdir -p "${FOLDERPATH}/volumes/db"
 mkdir -p "${FOLDERPATH}/volumes/index"
 mkdir -p "${FOLDERPATH}/volumes/data"
 mkdir -p "${FOLDERPATH}/volumes/logs/error"
 mkdir -p "${FOLDERPATH}/volumes/logs/apache"
+mkdir -p "${FOLDERPATH}/volumes/etc/apache2"
+mkdir -p "${FOLDERPATH}/volumes/etc/php"
+mkdir -p "${FOLDERPATH}/volumes/etc/mysql"
 
 # set the link
 if [[ ${GLOBAL} == "TRUE" ]]
@@ -277,8 +276,8 @@ else
 fi
 doil_send_okay
 
-# set user rights
-doil_send_status "Setting folder rights"
+# set user permissions
+doil_send_status "Setting folder permissions"
 if [[ -z ${GLOBAL} ]]
 then
   chown -R ${USER}:doil ${FOLDERPATH}
@@ -320,10 +319,13 @@ then
 else
   cd "${HOME}/.doil/repositories/${REPOSITORY}"
 fi
+
+# updating the git repo
 git config core.fileMode false
-git fetch origin --quiet > /dev/null
-git checkout ${BRANCH} --quiet > /dev/null> /dev/null
-git pull origin ${BRANCH} --quiet > /dev/null
+git checkout origin/${BRANCH} --quiet > /dev/null
+git branch -D ${BRANCH} --quiet > /dev/null
+git checkout -b ${BRANCH} --quiet > /dev/null
+
 if [[ ${GLOBAL_REPOSITORY} == "TRUE" ]]
 then
   cp -r "/usr/local/share/doil/repositories/${REPOSITORY}" "${FOLDERPATH}/volumes/ilias"
@@ -364,13 +366,38 @@ doil_send_okay
 
 #######################
 # building minion image
-echo "Building minion image ..."
+doil_send_status "Building minion image"
 
 # build the image
 cd ${FOLDERPATH}
-docker-compose up --force-recreate --no-start --renew-anon-volumes --quiet-pull > /dev/null
-docker-compose up -d
+TMP_BUILD=$(docker build -t doil/${NAME}_${SUFFIX} . 2>&1 > /dev/null)
+TMP_RUN=$(docker run -d --name ${NAME}_${SUFFIX} doil/${NAME}_${SUFFIX} 2>&1 > /dev/null)
+
+# mariadb
+docker exec -i ${NAME}_${SUFFIX} bash -c "apt install -y mariadb-server python3-mysqldb 2>&1 > /dev/null" 2>&1 > /dev/null
+docker exec -i ${NAME}_${SUFFIX} bash -c "/etc/init.d/mariadb start" > /dev/null
 sleep 5
+docker exec -i ${NAME}_${SUFFIX} bash -c "/etc/init.d/mariadb stop" 2>&1 > /dev/null
+
+# copy the config
+docker cp ${NAME}_${SUFFIX}:/etc/apache2 ./volumes/etc/
+docker cp ${NAME}_${SUFFIX}:/etc/php ./volumes/etc/
+docker cp ${NAME}_${SUFFIX}:/var/log/apache2/ ./volumes/logs/
+docker cp ${NAME}_${SUFFIX}:/etc/mysql/ ./volumes/etc/
+docker cp ${NAME}_${SUFFIX}:/var/lib/mysql/ ./volumes/
+
+# stop image
+docker commit ${NAME}_${SUFFIX} doil/${NAME}_${SUFFIX}:stable 2>&1 > /dev/null
+TMP_STOP=$(docker stop ${NAME}_${SUFFIX}) 2>&1 > /dev/null
+TMP_RM=$(docker rm ${NAME}_${SUFFIX}) 2>&1 > /dev/null
+
+# start container via docker-compose
+DDUP=$(doil up ${NAME} --quiet ${FLAG} 2>&1 > /dev/null)
+docker exec -i ${NAME}_${SUFFIX} bash -c "chown -R mysql:mysql /var/lib/mysql" > /dev/null
+docker exec -i ${NAME}_${SUFFIX} bash -c "/etc/init.d/mariadb start" > /dev/null
+sleep 5
+
+doil_send_okay
 
 ##############
 # checking key
@@ -380,8 +407,11 @@ doil_send_status "Checking key"
 SALTKEYS=$(docker exec -t -i saltmain /bin/bash -c "salt-key -L" | grep "${NAME}.${SUFFIX}")
 until [[ ! -z ${SALTKEYS} ]]
 do
+  docker exec -i ${NAME}_${SUFFIX} bash -c "killall -9 salt-minion" > /dev/null
+  docker exec -i ${NAME}_${SUFFIX} bash -c "rm -rf /var/lib/salt/pki/minion/*" > /dev/null
+  docker exec -i ${NAME}_${SUFFIX} bash -c "salt-minion -d" > /dev/null
   sleep 5
-  SALTKEYS=$(docker exec -t -i saltmain /bin/bash -c "salt-key -L" | grep "${NAME}.${SUFFIX}")
+  SALTKEYS=$(docker exec -t -i saltmain /bin/bash -c "salt-key -L" | grep "${NAME}.${SUFFIX}")  
 done
 doil_send_okay
 
@@ -394,31 +424,61 @@ docker exec -ti saltmain bash -c "salt-key -a '${NAME}.${SUFFIX}'"
 docker exec -ti saltmain bash -c "salt '${NAME}_${SUFFIX}' grains.set 'mysql_password' ${GRAIN_MYSQL_PASSWORD} "
 docker exec -ti saltmain bash -c "salt '${NAME}_${SUFFIX}' grains.set 'doil_domain' http://${DOIL_HOST}/${NAME} "
 docker exec -ti saltmain bash -c "salt '${NAME}_${SUFFIX}' grains.set 'doil_project_name' ${NAME} "
+
+if [[ "$(< /proc/version)" == *@(Microsoft|WSL)* ]]
+then
+  docker exec -i saltmain bash -c "salt '${NAME}.${SUFFIX}' grains.set 'doil_host_system' windows --out=quiet"
+else
+  docker exec -i saltmain bash -c "salt '${NAME}.${SUFFIX}' grains.set 'doil_host_system' linux --out=quiet"  
+fi
+
+
 sleep 5
 doil_send_okay
 
 ##################
 # apply base state
+set -e
 doil_send_status "Apply base state"
-doil apply ${NAME} base --quiet ${FLAG}
+OUTPUT=$(doil apply ${NAME} base ${FLAG} -c)
+if [[ ${OUTPUT} == *"Minions returned with non-zero exit code"* ]]
+then
+  doil_send_failed
+  exit
+fi
 doil_send_okay
 
 #################
 # apply dev state
 doil_send_status "Apply dev state"
-doil apply ${NAME} dev --quiet ${FLAG}
+OUTPUT=$(doil apply ${NAME} dev -c ${FLAG})
+if [[ ${OUTPUT} == *"Minions returned with non-zero exit code"* ]]
+then
+  doil_send_failed
+  exit
+fi
 doil_send_okay
 
 #################
 # apply php state
 doil_send_status "Apply php state"
-doil apply ${NAME} php${PHPVERSION} --quiet ${FLAG}
+OUTPUT=$(doil apply ${NAME} php${PHPVERSION} -c ${FLAG})
+if [[ ${OUTPUT} == *"Minions returned with non-zero exit code"* ]]
+then
+  doil_send_failed
+  exit
+fi
 doil_send_okay
 
 ###################
 # apply ilias state
 doil_send_status "Apply ilias state"
-doil apply ${NAME} ilias --quiet ${FLAG}
+OUTPUT=$(doil apply ${NAME} ilias -c ${FLAG})
+if [[ ${OUTPUT} == *"Minions returned with non-zero exit code"* ]]
+then
+  doil_send_failed
+  exit
+fi
 doil_send_okay
 
 ######################
@@ -429,13 +489,28 @@ ILIAS_VERSION_FILE=$(cat -e ${FOLDERPATH}/volumes/ilias/include/inc.ilias_versio
 ILIAS_VERSION=${ILIAS_VERSION_FILE:33:1}
 if (( ${ILIAS_VERSION} == 6 ))
 then
-  doil apply ${NAME} composer --quiet ${FLAG}
+  OUTPUT=$(doil apply ${NAME} composer -c ${FLAG})
+  if [[ ${OUTPUT} == *"Minions returned with non-zero exit code"* ]]
+  then
+    doil_send_failed
+    exit
+  fi
 elif (( ${ILIAS_VERSION} > 6 ))
 then
-  doil apply ${NAME} composer2 --quiet ${FLAG}
+  OUTPUT=$(doil apply ${NAME} composer2 -c ${FLAG})
+  if [[ ${OUTPUT} == *"Minions returned with non-zero exit code"* ]]
+  then
+    doil_send_failed
+    exit
+  fi
 elif (( ${ILIAS_VERSION} < 6 ))
 then
-  doil apply ${NAME} composer54 --quiet ${FLAG}
+  OUTPUT=$(doil apply ${NAME} composer54 -c ${FLAG})
+  if [[ ${OUTPUT} == *"Minions returned with non-zero exit code"* ]]
+  then
+    doil_send_failed
+    exit
+  fi
 fi
 doil_send_okay
 
@@ -444,14 +519,24 @@ doil_send_okay
 if (( ${ILIAS_VERSION} > 6 ))
 then
   doil_send_status "Trying autoinstaller"
-  doil apply ${NAME} autoinstall --quiet ${FLAG}
-  doil_send_okay
+  OUTPUT=$(doil apply ${NAME} autoinstall -c ${FLAG})
+  if [[ ${OUTPUT} == *"Minions returned with non-zero exit code"* ]]
+  then
+    doil_send_failed
+  else
+    doil_send_okay
+  fi
 fi
 
 #####
 # apply access
 doil_send_status "Apply access state"
-doil apply ${NAME} access --quiet ${FLAG}
+OUTPUT=$(doil apply ${NAME} access -c ${FLAG})
+if [[ ${OUTPUT} == *"Minions returned with non-zero exit code"* ]]
+then
+  doil_send_failed
+  exit
+fi
 doil_send_okay
 
 #########################
@@ -462,7 +547,7 @@ docker commit ${NAME}_${SUFFIX} doil/${NAME}_${SUFFIX}:stable > /dev/null
 doil_send_okay
 
 # stop the server
-doil down ${NAME} ${FLAG} --quiet
+DDOWN=$(doil down ${NAME} ${FLAG} --quiet 2>&1 > /dev/null)  2>&1 > /dev/null
 
 if [[ ${SKIP_README} != TRUE ]]
 then
@@ -488,4 +573,5 @@ fi
 # Everything done
 doil_send_log "Everything done"
 
-echo -e "Your project is successfully installed. Head to your project via 'doil instances:cd ${NAME}' and see the readme file for more information about the usage with doil."
+echo -e "Your project is successfully created. Head to your project via 'doil instances:cd ${NAME}' and see the readme file for more information about the usage with doil."
+
