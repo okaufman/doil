@@ -72,7 +72,7 @@ master: 172.20.0.254
 # retry_dns_count: 3
 
 # Set the port used by the master reply and authentication server.
-#master_port: 4506
+master_port: 4506
 
 # The user to run salt.
 #user: root
